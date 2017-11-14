@@ -21,16 +21,22 @@ func ParseFile(path string) (hostslice []string, err error) {
 	if err != nil {
 		return hostslice, err
 	}
-	for _, host := range strings.Split(string(hostlist), "\n") {
+	hostslice = strings.Split(string(hostlist), "\n")
+	hostslice = PrepareSlice(hostslice)
+	return hostslice, nil
+}
+
+func PrepareSlice(hostslice []string) (outslice []string) {
+	for _, host := range hostslice {
 		if host != "" {
 			if strings.Contains(host, ":") {
-				hostslice = append(hostslice, host)
+				outslice = append(hostslice, host)
 			} else {
-				hostslice = append(hostslice, host+":22")
+				outslice = append(hostslice, host+":22")
 			}
 		}
 	}
-	return hostslice, nil
+	return
 }
 
 func PassLogin(login string, pass string) *ssh.ClientConfig {
