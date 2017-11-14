@@ -3,10 +3,7 @@ package ScriptExec
 import (
 	"io/ioutil"
 	"strings"
-	"os"
-	"fmt"
 
-	"github.com/howeyc/gopass"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -37,9 +34,6 @@ func ParseFile(path string) (hostslice []string, err error) {
 }
 
 func PassLogin(login string, pass string) *ssh.ClientConfig {
-	if login == "" {
-		login = os.Getenv("LOGNAME")
-	}
 	return &ssh.ClientConfig{
 		User:            login,
 		Auth:            []ssh.AuthMethod{ssh.Password(pass)},
@@ -48,12 +42,6 @@ func PassLogin(login string, pass string) *ssh.ClientConfig {
 }
 
 func RsaLogin(login string, path string) (*ssh.ClientConfig, error) {
-	if login == "" {
-		login = os.Getenv("LOGNAME")
-	}
-	if path == "" {
-		path = os.Getenv("HOME") + "/.ssh/id_rsa"
-	}
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -63,17 +51,8 @@ func RsaLogin(login string, path string) (*ssh.ClientConfig, error) {
 		return nil, err
 	}
 	return &ssh.ClientConfig{
-		User: login,
-		Auth: []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		User:            login,
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}, nil
-}
-
-func AskPassWord() (string, error) {
-	fmt.Print("Password: ")
-	pass, err := (gopass.GetPasswdMasked())
-	if err != nil {
-		return "", err
-	}
-	return string(pass), nil
 }
