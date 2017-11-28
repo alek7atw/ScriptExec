@@ -1,18 +1,27 @@
-package ScriptExec
+package scriptExec
 
 import (
 	"io/ioutil"
 	"strings"
 
 	"golang.org/x/crypto/ssh"
+	"bytes"
+	"errors"
 )
 
-func ExecScript(s *ssh.Session, cmd string) ([]byte, error) {
-	out, err := s.CombinedOutput("bash <<EOF\n" + cmd + "\nEOF")
+func ExecScript(s *ssh.Session, cmd string, arguments string) (string, error) {
+	var stdoutBuf, stderrBuf bytes.Buffer
+	s.Stdout = &stdoutBuf
+	s.Stderr = &stderrBuf
+	err := s.Run("bash <<EOF " + arguments + "\n" + cmd + "\nEOF")
+	error := stderrBuf.String()
 	if err != nil {
-		return out, err
+		return "", err
 	}
-	return out, nil
+	if error != "" {
+		return "", errors.New(stderrBuf.String())
+	}
+	return stdoutBuf.String(), nil
 }
 
 func ParseFile(path string) (hostslice []string, err error) {
