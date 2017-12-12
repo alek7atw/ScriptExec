@@ -9,11 +9,19 @@ import (
 	"errors"
 )
 
-func ExecScript(s *ssh.Session, cmd string, arguments string) (string, error) {
-	var stdoutBuf, stderrBuf bytes.Buffer
+func ExecScript(s *ssh.Session, cmd string, arguments ...string) (string, error) {
+	var (
+		stdoutBuf, stderrBuf bytes.Buffer
+		strargs string
+	)
+
+	for _, arg := range arguments {
+		strargs += " " + arg
+	}
+
 	s.Stdout = &stdoutBuf
 	s.Stderr = &stderrBuf
-	err := s.Run("bash <<EOF " + arguments + "\n" + cmd + "\nEOF")
+	err := s.Run("bash <<EOF " + strargs + "\n" + cmd + "\nEOF")
 	error := stderrBuf.String()
 	if err != nil {
 		return "", err
