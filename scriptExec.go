@@ -12,20 +12,20 @@ import (
 func ExecScript(s *ssh.Session, cmd string, arguments ...string) (string, error) {
 	var (
 		stdoutBuf, stderrBuf bytes.Buffer
-		strargs string
+		strArgs              string
 	)
 
 	for _, arg := range arguments {
-		strargs += " " + arg
+		strArgs += " " + arg
 	}
 
 	s.Stdout = &stdoutBuf
 	s.Stderr = &stderrBuf
-	err := s.Run("bash <<EOF " + strargs + "\n" + cmd + "\nEOF")
-	error := stderrBuf.String()
+	err := s.Run("bash <<EOF " + strArgs + "\n" + cmd + "\nEOF")
 	if err != nil {
 		return "", err
 	}
+	error := stderrBuf.String()
 	if error != "" {
 		return "", errors.New(stderrBuf.String())
 	}
