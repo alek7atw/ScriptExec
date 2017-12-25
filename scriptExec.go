@@ -21,7 +21,7 @@ func ExecScript(s *ssh.Session, cmd string, arguments ...string) (string, error)
 
 	s.Stdout = &stdoutBuf
 	s.Stderr = &stderrBuf
-	err := s.Run("bash <<EOF " + strArgs + "\n" + cmd + "\nEOF")
+	err := s.Run("bash <<EOF " + "\n" + cmd + "\nEOF " + strArgs)
 	if err != nil {
 		return "", err
 	}
