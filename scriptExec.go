@@ -7,6 +7,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"bytes"
 	"errors"
+	"log"
 )
 
 func ExecScript(s *ssh.Session, cmd string, arguments ...string) (string, error) {
@@ -18,6 +19,8 @@ func ExecScript(s *ssh.Session, cmd string, arguments ...string) (string, error)
 	for _, arg := range arguments {
 		strArgs += " " + arg
 	}
+	log.Println(strArgs)
+	strArgs = ""
 
 	s.Stdout = &stdoutBuf
 	s.Stderr = &stderrBuf
