@@ -7,24 +7,15 @@ import (
 	"golang.org/x/crypto/ssh"
 	"bytes"
 	"errors"
-	"log"
 )
 
-func ExecScript(s *ssh.Session, cmd string, arguments ...string) (string, error) {
+func ExecScript(s *ssh.Session, cmd string) (string, error) {
 	var (
 		stdoutBuf, stderrBuf bytes.Buffer
-		strArgs              string
 	)
-
-	for _, arg := range arguments {
-		strArgs += " " + arg
-	}
-	log.Println(strArgs)
-	strArgs = ""
-
 	s.Stdout = &stdoutBuf
 	s.Stderr = &stderrBuf
-	err := s.Run("bash <<EOF " + "\n" + cmd + "\nEOF " + strArgs)
+	err := s.Run(cmd)
 	if err != nil {
 		return "", err
 	}
