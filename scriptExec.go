@@ -21,6 +21,7 @@ func ExecCmd(conn *ssh.Client, cmd string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer session.Close()
 	session.Stdout = &stdoutBuf
 	session.Stderr = &stderrBuf
 	err = session.Run(cmd)
@@ -31,27 +32,21 @@ func ExecCmd(conn *ssh.Client, cmd string) (string, error) {
 	if errorstr != "" {
 		return "", errors.New(errorstr)
 	}
-	session.Close()
 	return stdoutBuf.String(), nil
 }
 
-func CopyScript(session *ssh.Session, scriptpath string) error{
-	scriptFile, err := os.Open(scriptpath)
-	if err != nil {
-		return err
-	}
-	defer scriptFile.Close()
+func CopyScript(session *ssh.Session, scriptFile *os.File) error{
 	stats, err := scriptFile.Stat()
 	if err != nil {
 		return err
 	}
 
 	go func() {
-		w, _ := session.StdinPipe()
-		defer w.Close()
-		fmt.Fprintln(w, "C0775", stats.Size(), stats.Name())
-		io.Copy(w, scriptFile)
-		fmt.Fprint(w, "\x00") // transfer end with \x00
+		stdinWriter, _ := session.StdinPipe()
+		defer stdinWriter.Close()
+		fmt.Fprintln(stdinWriter, "C0775", stats.Size(), stats.Name())
+		io.Copy(stdinWriter, scriptFile)
+		fmt.Fprint(stdinWriter, "\x00") // transfer end with \x00
 	}()
 	if err := session.Run("/usr/bin/scp -t ./"); err != nil {
 		return err
@@ -60,57 +55,30 @@ func CopyScript(session *ssh.Session, scriptpath string) error{
 }
 
 func ExecScript(conn *ssh.Client, scriptpath string, scrArg ...string) (string, error){
-	var (
-		stdoutBuf, stderrBuf bytes.Buffer
-	)
 	session, err := conn.NewSession()
 	if err != nil {
 		return "", err
 	}
-	session.Stdout = &stdoutBuf
-	session.Stderr = &stderrBuf
+	defer session.Close()
 
 	scriptFile, err := os.Open(scriptpath)
 	if err != nil {
 		return "", err
 	}
 	defer scriptFile.Close()
+	if err != nil {
+		return "", err
+	}
+	err = CopyScript(session, scriptFile)
+
 	stats, err := scriptFile.Stat()
-	if err != nil {
-		return "", err
-	}
-
-	go func() {
-		w, _ := session.StdinPipe()
-		defer w.Close()
-		fmt.Fprintln(w, "C0775", stats.Size(), stats.Name())
-		io.Copy(w, scriptFile)
-		fmt.Fprint(w, "\x00") // transfer end with \x00
-	}()
-	if err := session.Run("/usr/bin/scp -t ./"); err != nil {
-		return "", err
-	}
-	session.Close()
-
-	session, err = conn.NewSession()
-	if err != nil {
-		return "", err
-	}
-
 	cmd := "./" + stats.Name()
 	for _, arg := range scrArg {
 		cmd += " " + arg
 	}
-	err = session.Run(cmd)
-	if err != nil {
-		return "", err
-	}
-	errorstr := stderrBuf.String()
-	if errorstr != "" {
-		return "", errors.New(errorstr)
-	}
-	session.Close()
-	return stdoutBuf.String(), nil
+	fmt.Println(cmd)
+	res, err := ExecCmd(conn, cmd)
+	return res, err
 }
 
 func SshGetClient(login string, path string) (*ssh.ClientConfig, error) {
@@ -150,14 +118,17 @@ func ParseFile(path string) (hostslice []string, err error) {
 	return hostslice, nil
 }
 
+func PrepareHost(host string) string {
+	if !strings.Contains(host, ":") {
+		host += ":22"
+	}
+	return host
+}
+
 func PrepareSlice(hostslice []string) (outslice []string) {
 	for _, host := range hostslice {
 		if host != "" {
-			if strings.Contains(host, ":") {
-				outslice = append(hostslice, host)
-			} else {
-				outslice = append(hostslice, host+":22")
-			}
+			outslice = append(hostslice, PrepareHost(host))
 		}
 	}
 	return
