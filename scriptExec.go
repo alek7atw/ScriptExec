@@ -35,7 +35,13 @@ func ExecCmd(conn *ssh.Client, cmd string) (string, error) {
 	return stdoutBuf.String(), nil
 }
 
-func CopyScript(session *ssh.Session, scriptFile *os.File) error{
+func CopyScript(conn *ssh.Client, scriptFile *os.File) error{
+	session, err := conn.NewSession()
+	if err != nil {
+		return err
+	}
+	defer session.Close()
+
 	stats, err := scriptFile.Stat()
 	if err != nil {
 		return err
@@ -54,26 +60,24 @@ func CopyScript(session *ssh.Session, scriptFile *os.File) error{
 	return nil
 }
 
-func ExecScript(conn *ssh.Client, scriptpath string, scrArg ...string) (string, error){
-	session, err := conn.NewSession()
-	if err != nil {
-		return "", err
-	}
-	defer session.Close()
-
+func ExecScript(conn *ssh.Client, scriptpath string, scriptArg ...string) (string, error){
 	scriptFile, err := os.Open(scriptpath)
 	if err != nil {
 		return "", err
 	}
 	defer scriptFile.Close()
+
+	err = CopyScript(conn, scriptFile)
 	if err != nil {
 		return "", err
 	}
-	err = CopyScript(session, scriptFile)
 
 	stats, err := scriptFile.Stat()
+	if err != nil {
+		return "", err
+	}
 	cmd := "./" + stats.Name()
-	for _, arg := range scrArg {
+	for _, arg := range scriptArg {
 		cmd += " " + arg
 	}
 	fmt.Println(cmd)
