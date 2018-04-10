@@ -80,7 +80,6 @@ func ExecScript(conn *ssh.Client, scriptpath string, scriptArg ...string) (strin
 	for _, arg := range scriptArg {
 		cmd += " " + arg
 	}
-	fmt.Println(cmd)
 	res, err := ExecCmd(conn, cmd)
 	return res, err
 }
